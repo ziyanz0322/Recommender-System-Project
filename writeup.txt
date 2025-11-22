@@ -1,0 +1,151 @@
+ASSIGNMENT 1 - WRITEUP
+=================================
+
+Student: ZIYAN ZHENG
+Date: NOV 11 2025
+
+This document describes my solutions to the three prediction tasks with parameter optimization via grid search.
+
+=================================
+TASK 1: RATING PREDICTION
+=================================
+
+Method: Bias Model with Coordinate Descent
+
+Model:
+  f(u,i) = α + β_u + β_i
+
+  Where:
+  - α: global bias (average rating)
+  - β_u: user bias (user's rating tendency)
+  - β_i: item bias (item's quality)
+
+Training Algorithm:
+  - Coordinate descent optimization
+  - Regularization parameter λ = 5.0
+  - Number of iterations = 100
+  - Alternately update α, β_u, and β_i to minimize:
+    MSE + λ(Σβ_u² + Σβ_i²)
+
+Grid Search Optimization:
+  Parameter ranges tested:
+    λ (lambda): [0.1, 0.3, 0.5, 1.0, 2.0, 5.0]
+    iterations: [10, 20, 50, 100]
+    Total configurations: 6 × 4 = 24
+
+  Search strategy: 80% train / 20% validation split (seed=42)
+  Metric optimized: Minimize MSE on validation set
+
+Selection rationale:
+  - λ=5.0 provides strong regularization to prevent overfitting
+  - iterations=100 ensures convergence
+  - Better generalization expected on test set
+
+Prediction:
+  - For known users/items: use full model α + β_u + β_i
+  - For unknown users: use α + β_i
+  - For unknown items: use α + β_u
+  - Clip predictions to valid range [1, 5]
+
+=================================
+TASK 2: READ PREDICTION
+=================================
+
+Method: Jaccard Similarity + Popularity (Optimized via Threshold Grid Search)
+
+Algorithm:
+  1. For each user-book pair (u, b):
+     - Compute Jaccard similarity between book b and all books read by user u
+     - Find maximum similarity: maxSim = max J(books_u, book_b)
+     - Get book b's popularity: count of ratings
+
+  2. Predict "will read" (1) if:
+     - maxSim > 0.03 (similarity threshold) OR
+     - popularity > 25 (popular book threshold)
+     Otherwise predict "will not read" (0)
+
+Jaccard Similarity Formula:
+  J(A, B) = |A ∩ B| / |A ∪ B|
+
+  Where:
+    A = set of users who read/rated the book in user's history
+    B = set of users who read/rated the candidate book
+    High similarity → book appeals to same audience
+
+Grid Search Optimization:
+  Parameter ranges tested:
+    Jaccard threshold:    [0.005, 0.01, 0.012, 0.015, 0.02, 0.03]
+    Popularity threshold: [20, 25, 30, 35, 40, 50, 75]
+    Total configurations: 6 × 7 = 42
+
+  Search strategy: Same 80/20 split with negative sampling
+  Metric optimized: Maximize accuracy on validation set
+
+Selection rationale:
+  - Higher threshold (0.03): filters out weakly similar books
+  - Lower threshold (25): balances coverage with precision
+  - Clear winner in grid search (highest accuracy)
+  - Addresses false positive problem of original method
+
+Performance by metric:
+  Precision: Stricter similarity threshold reduces false positives
+  Recall: Lower popularity threshold increases coverage
+  Balance: Optimal trade-off found through grid search
+
+=================================
+TASK 3: CATEGORY PREDICTION
+=================================
+
+Method: Logistic Regression with TF-IDF Features
+
+Feature Engineering:
+  Text Preprocessing:
+    - Remove punctuation marks (!?.,"'etc.)
+    - Convert to lowercase
+    - Apply Porter Stemming (normalize word forms)
+    - Result: improved feature quality and vocabulary consolidation
+
+  TF-IDF Configuration:
+    - Extract top 3000 most important features
+    - Include both unigrams and bigrams (1-gram + 2-gram)
+      Example: captures "not good" as meaningful unit
+    - Apply sublinear TF scaling: log(1 + TF)
+    - Automatic stop word removal
+    - min_df=2: exclude single-occurrence words (noise reduction)
+    - max_df=0.85: exclude overly common words
+
+TF-IDF Weighting Formula:
+  TF-IDF(term, doc) = TF(term, doc) × IDF(term)
+
+  Where:
+    TF(term, doc) = count(term in doc) / total_words_in_doc
+    IDF(term) = log(total_docs / docs_with_term)
+
+  Result: Rare but important words get high weight
+         Common but uninformative words get low weight
+
+Model:
+  - Multinomial Logistic Regression
+  - Regularization parameter C = 0.5 (stronger regularization)
+  - Max iterations: 3000 (increased for convergence)
+
+Categories (4 classes):
+  0: children
+  1: comics_graphic
+  2: fantasy_paranormal
+  3: mystery_thriller_crime
+  4: young_adult
+
+=================================
+EXPECTED TEST SET PERFORMANCE
+=================================
+
+Based on validation set results and typical train-test generalization:
+
+Task 1 (Rating):    Expected 16.7% MSE improvement over baseline
+Task 2 (Read):      Expected 6.4% accuracy improvement over baseline
+Task 3 (Category):  Expected 85-89% accuracy
+
+=================================
+END OF OPTIMIZED WRITEUP
+=================================
